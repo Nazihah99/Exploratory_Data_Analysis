@@ -1,0 +1,44 @@
+import matplotlib.cm as cm
+
+# Set the color map for the plots
+cmap = cm.get_cmap('tab20')
+
+# Read the data from the file
+data = pd.read_table('/content/drive/MyDrive/Assignment_2/ApachePig_Output/Output_Q8.txt', delimiter='\t', header=None)
+data = pd.DataFrame(data)
+data = data.add_prefix('A')
+
+# Rename the columns for better readability
+new_names = {'A0': 'FlightNo/Airlines', 'A1': 'AverageDelay', 'A2': 'NoFlight', 'A3': 'NoCancel', 'A4': 'NoDelay'}
+data = data.rename(columns=new_names)
+
+# Filter the data based by only including the number of flight same or greater than the mean of the number of flight
+data_count = data[data.NoFlight >= 101]
+
+# Filter the data based by only including the time delay of flight same or greater than the mean of the time delay of flight
+data_count = data_count[data_count.AverageDelay >= 10.819121]
+
+# Calculate the percentage of delayed flights for each airline based on the number of flights
+data_count['Percentage'] = (data['NoDelay'] / data['NoFlight']) * 100
+
+# Select and sort the top 20 airlines with the highest percentage of delayed flights
+data_count_largest = data_count.nlargest(20, 'Percentage')
+
+# Plot the average delay for the top 20 airlines with the highest delays
+avgdelay = data_count.nlargest(20, 'AverageDelay')
+avgdelay = avgdelay[["FlightNo/Airlines", "AverageDelay"]]
+avgdelay.plot(kind='bar', x='FlightNo/Airlines', y='AverageDelay', color=cmap(range(len(avgdelay))))
+plt.title('Average Delay')
+
+# Plot the number of delayed flights for the top 20 airlines with the most delays
+noflight = data.nlargest(20, "NoDelay")
+noflight = noflight[["FlightNo/Airlines", "NoDelay"]]
+noflight.plot(kind='bar', x='FlightNo/Airlines', y='NoDelay', color=cmap(range(len(noflight))))
+plt.title('No of Flight of Delay')
+
+# Plot the number of cancellations for the top 20 airlines with the most cancellations
+nocancel = data.nlargest(20, "NoCancel")
+nocancel['Percentage'] = (data['NoCancel'] / np.sum(data['NoCancel'])) * 100
+nocancel = nocancel[["FlightNo/Airlines", "NoCancel"]]
+nocancel.plot(kind='bar', x='FlightNo/Airlines', y='NoCancel', color=cmap(range(len(nocancel))))
+plt.title('No of Cancellation')
