@@ -1,0 +1,73 @@
+-- Load in the 2008 data set
+data_2h = LOAD '/assignment2_files/2008.csv.bz2' USING PigStorage(',')  AS (Year:int, Month:int, DayofMonth:int, DayOfWeek:int,
+          DepTime:int, CRSDepTime:int, ArrTime:int, CRSArrTime:int, UniqueCarrier:chararray, FlightNum:int, TailNum:chararray,
+          ActualElapsedTime:int, CRSElapsedTime:int, AirTime:int, ArrDelay:int, DepDelay:int, Origin:chararray, Dest:chararray,
+          Distance:int, TaxiIn:int, TaxiOut:int, Cancelled:int, CancellationCode:chararray, Diverted:int, CarrierDelay:int,
+          WeatherDelay:int, NASDelay:int, SecurityDelay:int, LateAircraftDelay:int);
+
+-- Filter out flights that have not been cancelled, indicated by Cancelled == 0
+data_non_cancel = FILTER data_2h BY Cancelled == 0;
+
+-- For the non-cancelled flights, group them by their FlightNum
+flight_delays_avg_group = GROUP data_non_cancel BY  (FlightNum, UniqueCarrier);
+
+-- Find the average flight delay time for each FlightNum.
+-- Also, count the number of flights for each FlightNum (non-cancelled flights)
+flight_avg_delay = FOREACH flight_delays_avg_group GENERATE group AS FlightNum, AVG(data_non_cancel.ArrDelay) AS NoCancelAvgDelay,
+                   COUNT(data_non_cancel) AS NoCancel_NoOfFlights;
+
+-- For the non-cancelled flights, filter out flights that have an arrival delay of at least more than 0 minutes.
+-- This is because 0 indicates that there is no delay, whereas negative arrival times indicate the flight arriving at the
+-- destination earlier.
+data_no_of_delay = FILTER data_non_cancel BY ArrDelay > 0;
+
+-- For the non-cancelled flights with delays, group them by their FlightNum
+flight_delays_no_group = GROUP data_no_of_delay BY (FlightNum, UniqueCarrier);
+
+-- Find the number of delayed flights for each FlightNum.
+flight_no_of_delay = FOREACH flight_delays_no_group GENERATE group AS FlightNum, COUNT(data_no_of_delay.ArrDelay) AS CountofDelay;
+
+-- Order the flights according to average delay in descending order
+sorted_avg_delay = ORDER flight_avg_delay BY NoCancelAvgDelay DESC;
+
+-- Order the flights according to number of delays in descending order
+sorted_no_of_delay = ORDER flight_no_of_delay BY CountofDelay DESC;
+
+-- From the original data set, group the flights by their FlightNum
+data_cancel_flights = GROUP data_2h BY (FlightNum, UniqueCarrier);
+
+-- Since cancelled flights are labelled as 1, just sum them up to get the number of cancelled flights.
+no_of_cancel_flights = FOREACH data_cancel_flights GENERATE group AS FlightNum, SUM(data_2h.Cancelled) AS NumberOfCancel;
+
+-- Order the flights according to number of cancelled flights in descending order
+sorted_no_of_cancel = ORDER no_of_cancel_flights BY NumberOfCancel DESC;
+
+-- Join the average delay, number of delays and number of cancelled flights results together
+joined_results = JOIN sorted_avg_delay BY FlightNum, sorted_no_of_delay BY FlightNum, no_of_cancel_flights BY FlightNum;
+
+-- Generate the results of flight number, sorted average delay, sorted number of delays, number of non-cancelled flights and
+-- number of cancelled flights.
+result = FOREACH joined_results GENERATE
+    sorted_avg_delay::FlightNum,
+    sorted_avg_delay::NoCancelAvgDelay AS AverageDelay,
+    sorted_no_of_delay::CountofDelay AS NumberofDelay,
+    sorted_avg_delay::NoCancel_NoOfFlights AS NumberOf_NonCancelled,
+    no_of_cancel_flights::NumberOfCancel;
+
+-- Get the top 5 average delays in descending order.
+top5_AvgDelay = ORDER result BY AverageDelay DESC;
+top5_AvgDelay = LIMIT top5_AvgDelay 5;
+DUMP top5_AvgDelay;
+
+-- Get the top 5 number of delays in descending order.
+top5_CountDelay = ORDER result BY NumberofDelay DESC;
+top5_CountDelay = LIMIT top5_CountDelay 5;
+DUMP top5_CountDelay;
+
+-- Get the top 5 number of cancelled flights in descending order.
+top5_CancelledFlights = ORDER result BY NumberOfCancel DESC;
+top5_CancelledFlights = LIMIT top5_CancelledFlights 5;
+DUMP top5_CancelledFlights;
+
+-- Store the result
+STORE result into 'result' using PigStorage('\t', '-schema');
