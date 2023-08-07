@@ -6,6 +6,30 @@ This project aims to analyze flight delay data to identify trends and patterns i
 ## Motivation
 Flight delays and cancellations can significantly disrupt travel arrangements and inconvenience passengers. Understanding the factors contributing to delays and cancellations is crucial for the airline industry to implement preventative measures and specific strategies to improve on-time performance and enhance customer satisfaction.
 
+# Methodology
+## Apache Pig Analysis
+### Approach 1: Flight with the Highest Frequency of Delays
+Filter the data to exclude flights that were cancelled using the FILTER function.
+Perform aggregation based on flight number and unique carriers using the GROUP BY function.
+Utilize the AVG function to determine the average time delay and the COUNT function to determine the number of non-cancelled flights.
+Sort the data in descending order to identify the flight with the highest average time delay.
+### Approach 2: Flights with the Highest Frequency of Arrival Delays
+Filter the data to include only arrival delays greater than zero, excluding flights arriving early or with negative delays.
+Perform aggregation based on flight number and unique carriers using the GROUP BY function.
+Determine the number of flight delays using the COUNT function.
+Sort the results in descending order to identify the flights with the highest frequency of arrival delays.
+### Approach 3: Flights with the Highest Frequency of Cancellations
+Aggregate the data based on flight number and unique carriers using the GROUP BY function.
+Determine the number of flight cancellations using the SUM function.
+Sort the results in descending order to identify the flights with the highest frequency of cancellations.
+
+## Python Analysis
+The frequency table is imported to Google Colab, and columns are renamed for clarity.
+The data is filtered to exclude airlines with a number of flights less than the mean and time delays lower than a specified threshold. This step removes irrelevant observations and focuses on airlines with significant delay times and a higher number of flights.
+The percentage of delayed flights is calculated for each airline based on the total number of flights, and the top 20 airlines with the highest percentages are selected.
+Bar plots are generated to visualize the average delay and the number of delayed flights for the top 20 airlines, providing insights into their performance in these areas.
+The number of cancellations for the top 20 airlines with the most cancellations is identified and plotted. The percentage of cancellations relative to the overall sum of cancellations is calculated.
+
 ## Data Refinement
 To ensure the reliability of the results, the dataset was refined by selecting flights that had delays greater than the mean delay time (10.819121 minutes) and had been flown more than the mean total number of flights (101 times). This filtering process aimed to remove any bias caused by outlier flights with significantly long delays or occurrences. By focusing on commonly traveled routes with average delay times, a more accurate understanding of overall delay patterns was obtained.
 
